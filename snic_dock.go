@@ -93,7 +93,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return fmt.Errorf("failed to assign IP address and bring up interface in container: %v", err)
 	}
 
-	//listenのコマンドを打つ
+	//listenのコマンド
 
 	// コマンドと引数を準備
 	cmd_listen := exec.Command("./listen_req", "80", "0")
@@ -104,7 +104,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return fmt.Errorf("failed to run listen command: %v", err)
 	}
 
-	//connectのコマンドを打つ
+	//connectのコマンド
 	ipPairs := []IPPair{
 		{SNICIP: "192.168.11.202", containerIP: "192.168.11.11"},
 		{SNICIP: "192.168.11.202", containerIP: "192.168.11.12"},
