@@ -14,6 +14,7 @@ import (
 type PluginEnvArgs struct {
 	types.CommonArgs
 	CONTAINER_NAME string `json:"container_name"`
+	Netns          string `json:"netns"`
 }
 type PluginConf struct {
 	CNIVersion string `json:"cniVersion"`
@@ -50,7 +51,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	if err != nil {
 		return err
 	}
-
+	// 事前に決めたIPの最後をnとする
 	var n int
 	switch cniArgs.CONTAINER_NAME {
 	case "productpage":
@@ -66,45 +67,42 @@ func cmdAdd(args *skel.CmdArgs) error {
 	case "ratings":
 		n = 16
 	}
-
+	// eth(n-1)とvethnのペアを作る。
 	ethName := fmt.Sprintf("eth%d", n-1)
 	vethName := fmt.Sprintf("veth%d", n)
 	ipAddress := fmt.Sprintf("192.168.11.%d", n)
+	software_bridge := "my_bridge"
+	bridge_ip := fmt.Sprintf("192.168.11.%d", 100+n)
 
 	if err := exec.Command("ip", "link", "add", ethName, "type", "veth", "peer", "name", vethName).Run(); err != nil {
 		return fmt.Errorf("failed to create veth pair: %v", err)
 	}
 
 	// vethペアの片方（vethn）をコンテナのネットワーク名前空間に移動
-	if err := exec.Command("ip", "link", "set", vethName, "netns", args.Netns).Run(); err != nil {
+	if err := exec.Command("ip", "link", "set", vethName, "netns", cniArgs.Netns).Run(); err != nil {
 		return fmt.Errorf("failed to move veth to container netns: %v", err)
 	}
 
-	// コンテナ内でeth(n-1)のインターフェースをアップ
-	if err := exec.Command("nsenter", "--net="+args.Netns, "ip", "link", "set", ethName, "up").Run(); err != nil {
+	// vethにIPをつける
+	if err := exec.Command("nsenter", "--net="+cniArgs.Netns, "ip", "addr", "add", ipAddress, "dev", vethName).Run(); err != nil {
+		return fmt.Errorf("failed to assign ip to veth: %v", err)
+	}
+
+	// コンテナ内でvethnのインターフェースをアップ
+	if err := exec.Command("nsenter", "--net="+cniArgs.Netns, "ip", "link", "set", vethName, "up").Run(); err != nil {
 		return fmt.Errorf("failed to set eth interface up in container: %v", err)
 	}
 
-	cmd := fmt.Sprintf("ip addr add %s/24 dev %s && ip link set %s up", ipAddress, ethName, ethName)
-
-	netnsCmd := exec.Command("nsenter", "--net="+args.Netns, "bash", "-c", cmd)
-
-	if err := netnsCmd.Run(); err != nil {
-		return fmt.Errorf("failed to assign IP address and bring up interface in container: %v", err)
+	// ethとsoftware_bridgeを繋げる
+	if err := exec.Command("ip", "link", "set", ethName, "master", software_bridge).Run(); err != nil {
+		return fmt.Errorf("failed to attach eth to bridge: %v", err)
 	}
 
-	//listenのコマンド
-
-	// コマンドと引数を準備
-	cmd_listen := exec.Command("./listen_req", "80", "0")
-	// コマンドを実行するディレクトリを指定
-	cmd_listen.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
-
-	if err := cmd_listen.Run(); err != nil {
-		return fmt.Errorf("failed to run listen command: %v", err)
+	// software_bridgeに新たなIPをくっつける
+	if err := exec.Command("ip", "addr", "add", bridge_ip+"/24", "dev", software_bridge).Run(); err != nil {
+		return fmt.Errorf("failed to assigne ip to bridge: %v", err)
 	}
-
-	//connectのコマンド
+	// コンテナのipとそのノードのipの対応表
 	ipPairs := []IPPair{
 		{SNICIP: "192.168.11.202", containerIP: "192.168.11.11"},
 		{SNICIP: "192.168.11.202", containerIP: "192.168.11.12"},
@@ -113,15 +111,18 @@ func cmdAdd(args *skel.CmdArgs) error {
 		{SNICIP: "192.168.11.201", containerIP: "192.168.11.15"},
 		{SNICIP: "192.168.11.201", containerIP: "192.168.11.16"},
 	}
-
+	//listenとconnectを行う(これからebpfやiptablesを使ってSNICIP次第でルーティングを行う)
 	for _, pair := range ipPairs {
-		if pair.containerIP != ipAddress {
+		if pair.containerIP == ipAddress {
+			cmd_listen := exec.Command("./listen_req", bridge_ip, "9080", pair.SNICIP, "9080", "0")
+			cmd_listen.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
+
+			if err := cmd_listen.Run(); err != nil {
+				return fmt.Errorf("failed to listen_req %v", err)
+			}
+		} else {
 			cmd_connect := exec.Command("./connect_reg", ipAddress+":9080"+":"+pair.SNICIP+":???", "0")
 			cmd_connect.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
-
-			if err := cmd_connect.Run(); err != nil {
-				return fmt.Errorf("failed to run connect command: %v", err)
-			}
 		}
 	}
 	return conf
