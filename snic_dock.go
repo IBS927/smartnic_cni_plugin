@@ -3,7 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"os/exec"
+	"strconv"
+	"strings"
 
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
@@ -13,8 +16,8 @@ import (
 
 type PluginEnvArgs struct {
 	types.CommonArgs
-	CONTAINER_NAME string `json:"container_name"`
-	Netns          string `json:"netns"`
+	CONTAINER_NAME string
+	CNI_NETNS      string
 }
 type PluginConf struct {
 	CNIVersion string `json:"cniVersion"`
@@ -73,23 +76,23 @@ func cmdAdd(args *skel.CmdArgs) error {
 	ipAddress := fmt.Sprintf("192.168.11.%d", n)
 	software_bridge := "my_bridge"
 	bridge_ip := fmt.Sprintf("192.168.11.%d", 100+n)
-
+	listen_port := fmt.Sprintf("%d", 10000+n)
 	if err := exec.Command("ip", "link", "add", ethName, "type", "veth", "peer", "name", vethName).Run(); err != nil {
 		return fmt.Errorf("failed to create veth pair: %v", err)
 	}
 
 	// vethペアの片方（vethn）をコンテナのネットワーク名前空間に移動
-	if err := exec.Command("ip", "link", "set", vethName, "netns", cniArgs.Netns).Run(); err != nil {
+	if err := exec.Command("ip", "link", "set", vethName, "netns", cniArgs.CNI_NETNS).Run(); err != nil {
 		return fmt.Errorf("failed to move veth to container netns: %v", err)
 	}
 
 	// vethにIPをつける
-	if err := exec.Command("nsenter", "--net="+cniArgs.Netns, "ip", "addr", "add", ipAddress, "dev", vethName).Run(); err != nil {
+	if err := exec.Command("nsenter", "--net="+cniArgs.CNI_NETNS, "ip", "addr", "add", ipAddress, "dev", vethName).Run(); err != nil {
 		return fmt.Errorf("failed to assign ip to veth: %v", err)
 	}
 
 	// コンテナ内でvethnのインターフェースをアップ
-	if err := exec.Command("nsenter", "--net="+cniArgs.Netns, "ip", "link", "set", vethName, "up").Run(); err != nil {
+	if err := exec.Command("nsenter", "--net="+cniArgs.CNI_NETNS, "ip", "link", "set", vethName, "up").Run(); err != nil {
 		return fmt.Errorf("failed to set eth interface up in container: %v", err)
 	}
 
@@ -111,21 +114,79 @@ func cmdAdd(args *skel.CmdArgs) error {
 		{SNICIP: "192.168.11.201", containerIP: "192.168.11.15"},
 		{SNICIP: "192.168.11.201", containerIP: "192.168.11.16"},
 	}
-	//listenとconnectを行う(これからebpfやiptablesを使ってSNICIP次第でルーティングを行う)
+	//listenとconnectを行う
+	//SNICIP==..201なら100,202なら101にiptablesでルーティングを行う。
+	var gw_str string
 	for _, pair := range ipPairs {
 		if pair.containerIP == ipAddress {
-			cmd_listen := exec.Command("./listen_req", bridge_ip, "9080", pair.SNICIP, "9080", "0")
-			cmd_listen.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
+			if pair.SNICIP == "192.168.11.201" {
+				gw_str = "192.168.11.3"
+			} else {
+				gw_str = "192.168.11.4"
+			}
 
+			cmd_listen := exec.Command("./listen_req", bridge_ip, "9080", pair.SNICIP, listen_port, "0")
+			cmd_listen.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
 			if err := cmd_listen.Run(); err != nil {
-				return fmt.Errorf("failed to listen_req %v", err)
+				return fmt.Errorf("failed to listen_req: %v", err)
 			}
 		} else {
-			cmd_connect := exec.Command("./connect_reg", ipAddress+":9080"+":"+pair.SNICIP+":???", "0")
+			var forward_ip string
+			if pair.SNICIP == "192.168.11.201" {
+				forward_ip = "192.168.11.100"
+			} else {
+				forward_ip = "192.168.11.101"
+			}
+			split_ip := strings.Split(pair.containerIP, ".")
+			if len(split_ip) < 4 {
+				fmt.Errorf("not IPAddress")
+			}
+			last_ip, err := strconv.Atoi(split_ip[3])
+			if err != nil {
+				fmt.Errorf("The last ip is not int type: %v", err)
+			}
+			forward_port := fmt.Sprintf("%d", last_ip+10000)
+			if err := exec.Command("iptables", "-t", "nat", "I", "PREROUTING", "-p", "tcp", "-s", ipAddress, "-d", pair.containerIP, "-j", "DNAT", "--to-destination", forward_ip+":"+forward_port).Run(); err != nil {
+				return fmt.Errorf("failed to set iptables: %v", err)
+			}
+			cmd_connect := exec.Command("./connect_reg", forward_ip+":"+forward_port+":"+pair.SNICIP+":"+forward_port, "0")
 			cmd_connect.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
 		}
 	}
-	return conf
+
+	iface, err := net.InterfaceByName(vethName)
+	if err != nil {
+		return fmt.Errorf("No vath interface mac: %v", err)
+	}
+
+	// MACアドレスを取得
+	mac := iface.HardwareAddr.String()
+
+	ip, ipNet, err := net.ParseCIDR(ipAddress + "/24")
+	if err != nil {
+		return fmt.Errorf("failed to parse IP CIDR: %v", err)
+	}
+	gw := net.ParseIP(gw_str)
+	// CNI Resultの構築
+	result := &current.Result{
+		CNIVersion: "0.4.0",
+		Interfaces: []*current.Interface{{
+			Name:    vethName,
+			Mac:     mac,
+			Sandbox: cniArgs.CNI_NETNS,
+			// Sandboxはコンテナのネットワーク名前空間へのパスですが、ここでは例として空にしています
+		}},
+		IPs: []*current.IPConfig{{
+			Address: net.IPNet{IP: ip, Mask: ipNet.Mask},
+			Gateway: gw,
+			// InterfaceはInterfacesスライス内の対象インターフェースのインデックスです。
+			// ここでは最初の（そして唯一の）インターフェースを指しています。
+			Interface: current.Int(0),
+		}},
+	}
+
+	// 出力をJSON形式で標準出力に出力
+	return types.PrintResult(result, conf.CNIVersion)
 }
 func cmdDel(args *skel.CmdArgs) error {
 	return nil
