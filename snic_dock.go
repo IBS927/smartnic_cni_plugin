@@ -117,6 +117,13 @@ func cmdAdd(args *skel.CmdArgs) error {
 	//listenとconnectを行う
 	//SNICIP==..201なら100,202なら101にiptablesでルーティングを行う。
 	var gw_str string
+	var snic_now_ip string
+	for _, pair_now := range ipPairs {
+		if pair_now.containerIP == ipAddress {
+			snic_now_ip = pair_now.SNICIP
+		}
+	}
+
 	for _, pair := range ipPairs {
 		if pair.containerIP == ipAddress {
 			if pair.SNICIP == "192.168.11.201" {
@@ -132,10 +139,18 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 		} else {
 			var forward_ip string
-			if pair.SNICIP == "192.168.11.201" {
-				forward_ip = "192.168.11.100"
+			if snic_now_ip == "192.168.11.202" {
+				if pair.SNICIP == "192.168.11.201" {
+					forward_ip = "192.168.11.100"
+				} else {
+					forward_ip = "192.168.11.101"
+				}
 			} else {
-				forward_ip = "192.168.11.101"
+				if pair.SNICIP == "192.168.11.202" {
+					forward_ip = "192.168.11.102"
+				} else {
+					forward_ip = "192.168.11.103"
+				}
 			}
 			split_ip := strings.Split(pair.containerIP, ".")
 			if len(split_ip) < 4 {
