@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-
+	"os"
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
 	current "github.com/containernetworking/cni/pkg/types/100"
@@ -50,13 +50,16 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return err
 	}
 
-	cniArgs, err := makeCNIArgs(args)
-	if err != nil {
-		return err
-	}
+	//cniArgs, err := makeCNIArgs(args)
+	//if err != nil {
+	//	return err
+	//}
+	c_name:=os.Getenv("CONTAINER_NAME")
+	c_netns:=os.Getenv("CNI_NETNS")
+	//fmt.Printf("ko %v\n",c_name)
 	// 事前に決めたIPの最後をnとする
 	var n int
-	switch cniArgs.CONTAINER_NAME {
+	switch c_name {
 	case "productpage":
 		n = 11
 	case "details":
@@ -74,6 +77,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	ethName := fmt.Sprintf("eth%d", n-1)
 	vethName := fmt.Sprintf("veth%d", n)
 	ipAddress := fmt.Sprintf("192.168.11.%d", n)
+	ipAdd_cidr:=ipAddress+"/24"
 	software_bridge := "my_bridge"
 	//bridge_ip := fmt.Sprintf("192.168.11.%d", 100+n)
 	listen_port := fmt.Sprintf("%d", 10000+n)
@@ -82,23 +86,26 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 
 	// vethペアの片方（vethn）をコンテナのネットワーク名前空間に移動
-	if err := exec.Command("ip", "link", "set", vethName, "netns", cniArgs.CNI_NETNS).Run(); err != nil {
+	if err := exec.Command("ip", "link", "set", vethName, "netns", c_netns).Run(); err != nil {
 		return fmt.Errorf("failed to move veth to container netns: %v", err)
 	}
 
 	// vethにIPをつける
-	if err := exec.Command("nsenter", "--net="+cniArgs.CNI_NETNS, "ip", "addr", "add", ipAddress, "dev", vethName).Run(); err != nil {
+	if err := exec.Command("nsenter", "--net="+c_netns, "ip", "addr", "add", ipAdd_cidr, "dev", vethName).Run(); err != nil {
 		return fmt.Errorf("failed to assign ip to veth: %v", err)
 	}
 
 	// コンテナ内でvethnのインターフェースをアップ
-	if err := exec.Command("nsenter", "--net="+cniArgs.CNI_NETNS, "ip", "link", "set", vethName, "up").Run(); err != nil {
+	if err := exec.Command("nsenter", "--net="+c_netns, "ip", "link", "set", vethName, "up").Run(); err != nil {
 		return fmt.Errorf("failed to set eth interface up in container: %v", err)
 	}
 
 	// ethとsoftware_bridgeを繋げる
 	if err := exec.Command("ip", "link", "set", ethName, "master", software_bridge).Run(); err != nil {
 		return fmt.Errorf("failed to attach eth to bridge: %v", err)
+	}
+	if err := exec.Command("ip","link","set",ethName,"up").Run(); err != nil {
+		return fmt.Errorf("failed to eth up: %v",err)
 	}
 
 	// software_bridgeに新たなIPをくっつける
@@ -125,11 +132,11 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 
 	if snic_now_ip == "192.168.11.202" {
-		if err := exec.Command("nsenter", "--net="+cniArgs.CNI_NETNS, "ip", "route", "add", "default", "via", "192.168.11.100").Run(); err != nil {
+		if err := exec.Command("nsenter", "--net="+c_netns, "ip", "route", "add", "default", "via", "192.168.11.100").Run(); err != nil {
 			return fmt.Errorf("can't attch route %v", err)
 		}
 	} else {
-		if err := exec.Command("nsenter", "--net="+cniArgs.CNI_NETNS, "ip", "route", "add", "default", "via", "192.168.11.102").Run(); err != nil {
+		if err := exec.Command("nsenter", "--net="+c_netns, "ip", "route", "add", "default", "via", "192.168.11.102").Run(); err != nil {
 			return fmt.Errorf("can't attch route %v", err)
 		}
 	}
@@ -142,7 +149,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 				gw_str = "192.168.11.4"
 			}
 
-			cmd_listen := exec.Command("./listen_req", ipAddress, "9080", pair.SNICIP, listen_port, "0")
+			cmd_listen := exec.Command("./listen_req", ipAddress, "9080", pair.SNICIP, listen_port, "0","../sdk_work_zynq/wamer_work/src/sample/pass.wasm")
 			cmd_listen.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
 			if err := cmd_listen.Run(); err != nil {
 				return fmt.Errorf("failed to listen_req: %v", err)
@@ -190,7 +197,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		Interfaces: []*current.Interface{{
 			Name:    vethName,
 			Mac:     mac,
-			Sandbox: cniArgs.CNI_NETNS,
+			Sandbox: c_netns,
 			// Sandboxはコンテナのネットワーク名前空間へのパスですが、ここでは例として空にしています
 		}},
 		IPs: []*current.IPConfig{{
@@ -209,7 +216,9 @@ func cmdDel(args *skel.CmdArgs) error {
 	return nil
 }
 
-func main() {
+func main(){
+	co:= os.Getenv("CNI_COMMAND")
+	fmt.Printf("%v\n",co)
 	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, version.All, "")
 }
 

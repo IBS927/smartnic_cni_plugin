@@ -1,6 +1,6 @@
 module github.com/IBS927/smartnic_cni_plugin
 
-go 1.22.0
+go 1.23
 
 require (
 	github.com/containernetworking/cni v1.1.2 // indirect
