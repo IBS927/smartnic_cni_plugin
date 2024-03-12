@@ -75,7 +75,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	vethName := fmt.Sprintf("veth%d", n)
 	ipAddress := fmt.Sprintf("192.168.11.%d", n)
 	software_bridge := "my_bridge"
-	bridge_ip := fmt.Sprintf("192.168.11.%d", 100+n)
+	//bridge_ip := fmt.Sprintf("192.168.11.%d", 100+n)
 	listen_port := fmt.Sprintf("%d", 10000+n)
 	if err := exec.Command("ip", "link", "add", ethName, "type", "veth", "peer", "name", vethName).Run(); err != nil {
 		return fmt.Errorf("failed to create veth pair: %v", err)
@@ -102,9 +102,9 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 
 	// software_bridgeに新たなIPをくっつける
-	if err := exec.Command("ip", "addr", "add", bridge_ip+"/24", "dev", software_bridge).Run(); err != nil {
-		return fmt.Errorf("failed to assigne ip to bridge: %v", err)
-	}
+	//if err := exec.Command("ip", "addr", "add", bridge_ip+"/24", "dev", software_bridge).Run(); err != nil {
+	//	return fmt.Errorf("failed to assigne ip to bridge: %v", err)
+	//}
 	// コンテナのipとそのノードのipの対応表
 	ipPairs := []IPPair{
 		{SNICIP: "192.168.11.202", containerIP: "192.168.11.11"},
@@ -124,6 +124,16 @@ func cmdAdd(args *skel.CmdArgs) error {
 		}
 	}
 
+	if snic_now_ip == "192.168.11.202" {
+		if err := exec.Command("nsenter", "--net="+cniArgs.CNI_NETNS, "ip", "route", "add", "default", "via", "192.168.11.100").Run(); err != nil {
+			return fmt.Errorf("can't attch route %v", err)
+		}
+	} else {
+		if err := exec.Command("nsenter", "--net="+cniArgs.CNI_NETNS, "ip", "route", "add", "default", "via", "192.168.11.102").Run(); err != nil {
+			return fmt.Errorf("can't attch route %v", err)
+		}
+	}
+
 	for _, pair := range ipPairs {
 		if pair.containerIP == ipAddress {
 			if pair.SNICIP == "192.168.11.201" {
@@ -132,7 +142,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 				gw_str = "192.168.11.4"
 			}
 
-			cmd_listen := exec.Command("./listen_req", bridge_ip, "9080", pair.SNICIP, listen_port, "0")
+			cmd_listen := exec.Command("./listen_req", ipAddress, "9080", pair.SNICIP, listen_port, "0")
 			cmd_listen.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
 			if err := cmd_listen.Run(); err != nil {
 				return fmt.Errorf("failed to listen_req: %v", err)
@@ -140,17 +150,9 @@ func cmdAdd(args *skel.CmdArgs) error {
 		} else {
 			var forward_ip string
 			if snic_now_ip == "192.168.11.202" {
-				if pair.SNICIP == "192.168.11.201" {
-					forward_ip = "192.168.11.100"
-				} else {
-					forward_ip = "192.168.11.101"
-				}
+				forward_ip = "192.168.11.100"
 			} else {
-				if pair.SNICIP == "192.168.11.202" {
-					forward_ip = "192.168.11.102"
-				} else {
-					forward_ip = "192.168.11.103"
-				}
+				forward_ip = "192.168.11.102"
 			}
 			split_ip := strings.Split(pair.containerIP, ".")
 			if len(split_ip) < 4 {
@@ -208,9 +210,9 @@ func cmdDel(args *skel.CmdArgs) error {
 }
 
 func main() {
-	skel.PluginMain(cmdAdd, cmdGet, cmdDel, version.All, "")
+	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, version.All, "")
 }
 
-func cmdGet(args *skel.CmdArgs) error {
+func cmdCheck(args *skel.CmdArgs) error {
 	return types.PrintResult(&current.Result{}, "0.4.0")
 }
