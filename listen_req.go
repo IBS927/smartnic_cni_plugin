@@ -1,24 +1,22 @@
-package cni
+package main
 
 import (
 	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"net"
-	"os"
 	"strconv"
-	"strings"
 )
 
-func Listen_req(src_ip string, src_port string, dst_ip string, dst_port string, filter_dest_core string, wasm_pass string){
+func Listen_req(src_ip string, src_port_s string, dst_ip string, dst_port_s string, filter_dest_core_s string, wasm_pass string) error {
 	
 
-	src_port, err = strconv.Atoi(src_port)
+	src_port, err := strconv.Atoi(src_port_s)
 	if err != nil {
 		return fmt.Errorf("failed to cast listen_port: %v",err)
 	}
 
-	dst_port, err = strconv.Atoi(dst_port)
+	dst_port, err := strconv.Atoi(dst_port_s)
 	if err != nil {
 		return fmt.Errorf("failed to cast dst_port: %v", err)
 	}
@@ -26,9 +24,9 @@ func Listen_req(src_ip string, src_port string, dst_ip string, dst_port string, 
 	//dst_ip := 0x7f000001
 
 	const XWAMR_WASM_BIN_BUF_SIZE = 20000
-	const cmd = 3
+	const cmd = uint16(3)
 
-	filter_dest_core, err = strconv.Atoi(filter_dest_core)
+	filter_dest_core, err := strconv.Atoi(filter_dest_core_s)
 	
 	wasmBin, err := ioutil.ReadFile(wasm_pass)
 	if err != nil {
@@ -72,7 +70,7 @@ func Listen_req(src_ip string, src_port string, dst_ip string, dst_port string, 
 	}
 
 
-	return 0
+	return nil
 
 
 }

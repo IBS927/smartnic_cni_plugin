@@ -1,4 +1,4 @@
-package cni
+package main
 
 import (
 	"encoding/json"
@@ -80,7 +80,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	ipAdd_cidr:=ipAddress+"/24"
 	software_bridge := "my_bridge"
 	//bridge_ip := fmt.Sprintf("192.168.11.%d", 100+n)
-	//listen_port := fmt.Sprintf("%d", 10000+n)
+	listen_port := fmt.Sprintf("%d", 10000+n)
 	if err := exec.Command("ip", "link", "add", ethName, "type", "veth", "peer", "name", vethName).Run(); err != nil {
 		return fmt.Errorf("failed to create veth pair: %v", err)
 	}
@@ -148,7 +148,10 @@ func cmdAdd(args *skel.CmdArgs) error {
 			} else {
 				gw_str = "192.168.11.4"
 			}
-			Listen_req(ipAddress,"9080",pair.SNICIP, listen_port, "0","../sdk_work_zynq/wamer_work/src/sample/pass.wasm")
+			err:=Listen_req(ipAddress,"9080",pair.SNICIP, listen_port, "0","/home/appleuser/nic-toe_buff3/sdk_work_zynq/wamer_work/src/sample/pass.wasm")
+			if err != nil {
+				return fmt.Errorf("faile to listen_req : %v\n",err)
+			}
 			//cmd_listen := exec.Command("./listen_req", ipAddress, "9080", pair.SNICIP, listen_port, "0","../sdk_work_zynq/wamer_work/src/sample/pass.wasm")
 			//cmd_listen.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
 			//if err := cmd_listen.Run(); err != nil {
