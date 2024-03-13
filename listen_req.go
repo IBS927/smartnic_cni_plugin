@@ -23,21 +23,11 @@ func Listen_req(src_ip string, src_port_s string, dst_ip string, dst_port_s stri
 
 	//dst_ip := 0x7f000001
 
-	const XWAMR_WASM_BIN_BUF_SIZE = 20000
-	const cmd = uint16(3)
+	//const XWAMR_WASM_BIN_BUF_SIZE = 20000
+	const cmd = uint16(2)
 
 	filter_dest_core, err := strconv.Atoi(filter_dest_core_s)
 	
-	wasmBin, err := ioutil.ReadFile(wasm_pass)
-	if err != nil {
-		return fmt.Errorf("failed to read WASM binary file: %v\n", err)
-	}
-
-	fileSize := len(wasmBin)
-	if fileSize > XWAMR_WASM_BIN_BUF_SIZE {
-		return fmt.Errorf("WASM binary size exceeds the maximum buffer size.")
-	}
-
 	conn, err := net.Dial("tcp", net.JoinHostPort("127.0.0.1","25908"))
 	if err != nil {
 		return fmt.Errorf("failed to create socket: %v\n",err)
