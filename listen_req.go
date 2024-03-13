@@ -10,19 +10,15 @@ import (
 	"strings"
 )
 
-func main(){
-	if len(os.Args) != 7 {
-		return fmt.Errorf("Usage: ./listen_req src_ip src_port dst_ip dst_port arm_core wasm_pass")
-	}
+func Listen_req(src_ip string, src_port string, dst_ip string, dst_port string, filter_dest_core string, wasm_pass string){
+	
 
-	src_ip := os.Args[1]
-
-	src_port, err := strconv.Atoi(os.Args[2])
+	src_port, err = strconv.Atoi(src_port)
 	if err != nil {
 		return fmt.Errorf("failed to cast listen_port: %v",err)
 	}
 
-	dst_port, err := strconv.Atoi(os.Args[4])
+	dst_port, err = strconv.Atoi(dst_port)
 	if err != nil {
 		return fmt.Errorf("failed to cast dst_port: %v", err)
 	}
@@ -32,8 +28,7 @@ func main(){
 	const XWAMR_WASM_BIN_BUF_SIZE = 20000
 	const cmd = 3
 
-	filter_dest_core, err := strconv.Atoi(os.Args[5])
-	wasm_pass := os.Args[6]
+	filter_dest_core, err = strconv.Atoi(filter_dest_core)
 	
 	wasmBin, err := ioutil.ReadFile(wasm_pass)
 	if err != nil {

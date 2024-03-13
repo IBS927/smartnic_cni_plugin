@@ -148,6 +148,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			} else {
 				gw_str = "192.168.11.4"
 			}
+			Listen_req(ipAddress,"9080",pair.SNICIP, listen_port, "0","../sdk_work_zynq/wamer_work/src/sample/pass.wasm")
 			//cmd_listen := exec.Command("./listen_req", ipAddress, "9080", pair.SNICIP, listen_port, "0","../sdk_work_zynq/wamer_work/src/sample/pass.wasm")
 			//cmd_listen.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
 			//if err := cmd_listen.Run(); err != nil {
