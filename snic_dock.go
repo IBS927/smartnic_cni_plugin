@@ -80,7 +80,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	ipAdd_cidr:=ipAddress+"/24"
 	software_bridge := "my_bridge"
 	//bridge_ip := fmt.Sprintf("192.168.11.%d", 100+n)
-	listen_port := fmt.Sprintf("%d", 10000+n)
+	//listen_port := fmt.Sprintf("%d", 10000+n)
 	if err := exec.Command("ip", "link", "add", ethName, "type", "veth", "peer", "name", vethName).Run(); err != nil {
 		return fmt.Errorf("failed to create veth pair: %v", err)
 	}
@@ -148,12 +148,11 @@ func cmdAdd(args *skel.CmdArgs) error {
 			} else {
 				gw_str = "192.168.11.4"
 			}
-
-			cmd_listen := exec.Command("./listen_req", ipAddress, "9080", pair.SNICIP, listen_port, "0","../sdk_work_zynq/wamer_work/src/sample/pass.wasm")
-			cmd_listen.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
-			if err := cmd_listen.Run(); err != nil {
-				return fmt.Errorf("failed to listen_req: %v", err)
-			}
+			//cmd_listen := exec.Command("./listen_req", ipAddress, "9080", pair.SNICIP, listen_port, "0","../sdk_work_zynq/wamer_work/src/sample/pass.wasm")
+			//cmd_listen.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
+			//if err := cmd_listen.Run(); err != nil {
+			//	return fmt.Errorf("failed to listen_req: %v", err)
+			//}
 		} else {
 			var forward_ip string
 			if snic_now_ip == "192.168.11.202" {
@@ -170,17 +169,20 @@ func cmdAdd(args *skel.CmdArgs) error {
 				fmt.Errorf("The last ip is not int type: %v", err)
 			}
 			forward_port := fmt.Sprintf("%d", last_ip+10000)
-			if err := exec.Command("iptables", "-t", "nat", "I", "PREROUTING", "-p", "tcp", "-s", ipAddress, "-d", pair.containerIP, "-j", "DNAT", "--to-destination", forward_ip+":"+forward_port).Run(); err != nil {
+			if err := exec.Command("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-s", ipAddress, "-d", pair.containerIP, "-j", "DNAT", "--to-destination", forward_ip+":"+forward_port).Run(); err != nil {
 				return fmt.Errorf("failed to set iptables: %v", err)
 			}
 			cmd_connect := exec.Command("./connect_reg", forward_ip+":"+forward_port+":"+pair.SNICIP+":"+forward_port, "0")
 			cmd_connect.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
+			if err := cmd_connect.Run(); err != nil {
+                              return fmt.Errorf("failed to listen_req: %v", err)
+                        }
 		}
 	}
-
-	iface, err := net.InterfaceByName(vethName)
+	
+	iface, err := net.InterfaceByName(ethName)
 	if err != nil {
-		return fmt.Errorf("No vath interface mac: %v", err)
+		return fmt.Errorf("No veth interface mac: %v", err)
 	}
 
 	// MACアドレスを取得
@@ -195,7 +197,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	result := &current.Result{
 		CNIVersion: "0.4.0",
 		Interfaces: []*current.Interface{{
-			Name:    vethName,
+			Name:    ethName,
 			Mac:     mac,
 			Sandbox: c_netns,
 			// Sandboxはコンテナのネットワーク名前空間へのパスですが、ここでは例として空にしています
