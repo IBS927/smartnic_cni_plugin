@@ -67,7 +67,7 @@ func Connect_reg(src_ip string, src_port_s string, dst_ip string, dst_port_s str
 
 	c_info.Mode = 3
 
-	if err := binary.Write(conn, binary.LittleEndian, c_info); err != nil {
+	if err := binary.Write(conn, binary.LittleEndian, &c_info); err != nil {
 		return fmt.Errorf("failed to send connect_information: %v", err)
 	}
 
