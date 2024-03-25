@@ -15,7 +15,7 @@ type ConnectInfo struct {
     SrcPort        uint16  // Cの__u16に対応
     DstPort        uint16  // 同上
     DstCore        uint16  // 同上
-    ConnectForward bool    // Cのboolに対応（C99以降では_Bool型、1バイト）
+    ConnectForward uint8    // Cのboolに対応（C99以降では_Bool型、1バイト）
 }
 
 func Connect_reg(src_ip string, src_port_s string, dst_ip string, dst_port_s string, filter_dest_core_s string, connect_forward bool) error {
@@ -46,7 +46,11 @@ func Connect_reg(src_ip string, src_port_s string, dst_ip string, dst_port_s str
 	}
 	defer conn.Close()
 
-	c_info.ConnectForward = connect_forward
+	if  connect_forward {
+		c_info.ConnectForward = 1
+	}else {
+		c_info.ConnectForward = 0
+	}
 
 	var src_ipUint32 uint32
 	ipBytes := net.ParseIP(src_ip).To4()
