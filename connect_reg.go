@@ -32,11 +32,13 @@ func Connect_reg(src_ip string, src_port_s string, dst_ip string, dst_port_s str
 
 
 	var c_info ConnectInfo
-	c_info.dst_core, err =strconv.Atoi(filter_dest_core_s)
+	dst_core, err =strconv.Atoi(filter_dest_core_s)
 	if err != nil {
 		return fmt.Errorf("failed to cast dst_core: %v", err)
 	}
 
+	c_info.dst_core = uint16(dst_core)
+	
 	conn, err := net.Dial("tcp", net.JoinHostPort("127.0.0.1","25909"))
 	if err != nil {
 		return fmt.Errorf("failed to create socket: %v\n",err)
