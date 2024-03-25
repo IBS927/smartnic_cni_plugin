@@ -73,13 +73,34 @@ func Connect_reg(src_ip string, src_port_s string, dst_ip string, dst_port_s str
 	c_info.Mode = 3
 
 	buf := &bytes.Buffer{}
-	binary.Write(buf, binary.LittleEndian, c_info.Mode)
-    binary.Write(buf, binary.LittleEndian, c_info.SrcIP)
-    binary.Write(buf, binary.LittleEndian, c_info.DstIP)
-    binary.Write(buf, binary.LittleEndian, c_info.SrcPort)
-    binary.Write(buf, binary.LittleEndian, c_info.DstPort)
-    binary.Write(buf, binary.LittleEndian, c_info.DstCore)
-    binary.Write(buf, binary.LittleEndian, c_info.ConnectForward)
+	err=binary.Write(buf, binary.LittleEndian, c_info.Mode)
+	if err != nil {
+		return fmt.Errorf("failed mode: %v")
+	}
+    err=binary.Write(buf, binary.LittleEndian, c_info.SrcIP)
+	if err != nil {
+		return fmt.Errorf("failed src_ip: %v")
+	}
+    err=binary.Write(buf, binary.LittleEndian, c_info.DstIP)
+	if err != nil {
+		return fmt.Errorf("failed dst_ip: %v")
+	}
+    err=binary.Write(buf, binary.LittleEndian, c_info.SrcPort)
+	if err != nil {
+		return fmt.Errorf("failed src_port: %v")
+	}
+    err=binary.Write(buf, binary.LittleEndian, c_info.DstPort)
+	if err != nil {
+		return fmt.Errorf("failed dst_port: %v")
+	}
+    err=binary.Write(buf, binary.LittleEndian, c_info.DstCore)
+	if err != nil {
+		return fmt.Errorf("failed dst_core: %v")
+	}
+    err=binary.Write(buf, binary.LittleEndian, c_info.ConnectForward)
+	if err != nil {
+		return fmt.Errorf("failed connect_forward: %v")
+	}
 
     //err = binary.Write(buf, binary.LittleEndian, &c_info)
     //if err != nil {
