@@ -27,7 +27,9 @@ func Listen_req(src_ip string, src_port_s string, dst_ip string, dst_port_s stri
 	const cmd = uint16(2)
 
 	filter_dest_core, err := strconv.Atoi(filter_dest_core_s)
-	
+	if err != nil {
+		return fmt.Errorf("failed to cast dst_core: %v", err)
+	}
 	conn, err := net.Dial("tcp", net.JoinHostPort("127.0.0.1","25908"))
 	if err != nil {
 		return fmt.Errorf("failed to create socket: %v\n",err)

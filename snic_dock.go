@@ -150,7 +150,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 			err:=Listen_req(ipAddress,"9080",pair.SNICIP, listen_port, "0","/home/appleuser/nic-toe_buff3/sdk_work_zynq/wamer_work/src/sample/pass.wasm")
 			if err != nil {
-				return fmt.Errorf("faile to listen_req : %v\n",err)
+				return fmt.Errorf("failed to listen_req : %v\n",err)
 			}
 			//cmd_listen := exec.Command("./listen_req", ipAddress, "9080", pair.SNICIP, listen_port, "0","../sdk_work_zynq/wamer_work/src/sample/pass.wasm")
 			//cmd_listen.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
@@ -176,11 +176,10 @@ func cmdAdd(args *skel.CmdArgs) error {
 			if err := exec.Command("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-s", ipAddress, "-d", pair.containerIP, "-j", "DNAT", "--to-destination", forward_ip+":"+forward_port).Run(); err != nil {
 				return fmt.Errorf("failed to set iptables: %v", err)
 			}
-			cmd_connect := exec.Command("./connect_reg", forward_ip+":"+forward_port+":"+pair.SNICIP+":"+forward_port, "0")
-			cmd_connect.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
-			if err := cmd_connect.Run(); err != nil {
-                              return fmt.Errorf("failed to listen_req: %v", err)
-                        }
+			err := Connect_reg(forward_ip,forward_port,pair.SNICIP,forward_port,"0", 0)
+			if err != nil {
+				return fmt.Errorf("failed to connect: %v", err)
+			}
 		}
 	}
 	
