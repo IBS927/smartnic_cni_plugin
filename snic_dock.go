@@ -176,7 +176,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			if err := exec.Command("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-s", ipAddress, "-d", pair.containerIP, "-j", "DNAT", "--to-destination", forward_ip+":"+forward_port).Run(); err != nil {
 				return fmt.Errorf("failed to set iptables: %v", err)
 			}
-			err := Connect_reg(forward_ip,forward_port,pair.SNICIP,forward_port,"0", 0)
+			err = Connect_reg(forward_ip,forward_port,pair.SNICIP,forward_port,"0", false)
 			if err != nil {
 				return fmt.Errorf("failed to connect: %v", err)
 			}
