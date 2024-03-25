@@ -72,7 +72,7 @@ func Connect_reg(src_ip string, src_port_s string, dst_ip string, dst_port_s str
 
 	c_info.Mode = int32(3)
 
-	buf := &bytes.Buffer{}
+	/*buf := &bytes.Buffer{}
 	err=binary.Write(buf, binary.LittleEndian, c_info.Mode)
 	if err != nil {
 		return fmt.Errorf("failed mode: %v",err)
@@ -102,10 +102,12 @@ func Connect_reg(src_ip string, src_port_s string, dst_ip string, dst_port_s str
 		return fmt.Errorf("failed connect_forward: %v",err)
 	}
 
-    //err = binary.Write(buf, binary.LittleEndian, &c_info)
-    //if err != nil {
-    //    return fmt.Errorf("failed to serialize connect_info: %v", err)
-    //}
+	*/
+
+    err = binary.Write(buf, binary.LittleEndian, &c_info)
+    if err != nil {
+        return fmt.Errorf("failed to serialize connect_info: %v", err)
+    }
 
 	_, err = conn.Write(buf.Bytes())
     if err != nil {
