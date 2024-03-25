@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"strconv"
 )
@@ -25,15 +24,13 @@ func Connect_reg(src_ip string, src_port_s string, dst_ip string, dst_port_s str
 		return fmt.Errorf("failed to cast listen_port: %v",err)
 	}
 
-	src_port = uint16(src_port)
 
 	dst_port, err := strconv.Atoi(dst_port_s)
 	if err != nil {
 		return fmt.Errorf("failed to cast dst_port: %v", err)
 	}
 
-	dst_port = uint16(dst_port)
-	
+
 	var c_info ConnectInfo
 	c_info.DstCore, err :=strconv.Atoi(filter_dest_core_s)
 	if err != nil {
@@ -62,9 +59,9 @@ func Connect_reg(src_ip string, src_port_s string, dst_ip string, dst_port_s str
 	}
 	c_info.dst_ip = dst_ipUint32
 
-	c_info.src_port = src_port
+	c_info.src_port = uint16(src_port)
 
-	c_info.dst_port = dst_port
+	c_info.dst_port = uint16(dst_port)
 
 	c_info.mode = 3
 
