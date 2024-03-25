@@ -72,7 +72,8 @@ func Connect_reg(src_ip string, src_port_s string, dst_ip string, dst_port_s str
 
 	c_info.Mode = int32(3)
 
-	/*buf := &bytes.Buffer{}
+	buf := &bytes.Buffer{}
+	/*
 	err=binary.Write(buf, binary.LittleEndian, c_info.Mode)
 	if err != nil {
 		return fmt.Errorf("failed mode: %v",err)
