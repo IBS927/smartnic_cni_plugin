@@ -76,7 +76,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	// eth(n-1)とvethnのペアを作る。
 	ethName := fmt.Sprintf("eth%d", n-1)
 	vethName := fmt.Sprintf("veth%d", n)
-	ipAddress := fmt.Sprintf("192.168.11.%d", n)
+	ipAddress := fmt.Sprintf("192.168.0.%d", n)
 	ipAdd_cidr:=ipAddress+"/24"
 	software_bridge := "my_bridge"
 	//bridge_ip := fmt.Sprintf("192.168.11.%d", 100+n)
@@ -114,12 +114,12 @@ func cmdAdd(args *skel.CmdArgs) error {
 	//}
 	// コンテナのipとそのノードのipの対応表
 	ipPairs := []IPPair{
-		{SNICIP: "192.168.11.202", containerIP: "192.168.11.11"},
-		{SNICIP: "192.168.11.202", containerIP: "192.168.11.12"},
-		{SNICIP: "192.168.11.201", containerIP: "192.168.11.13"},
-		{SNICIP: "192.168.11.201", containerIP: "192.168.11.14"},
-		{SNICIP: "192.168.11.201", containerIP: "192.168.11.15"},
-		{SNICIP: "192.168.11.201", containerIP: "192.168.11.16"},
+		{SNICIP: "192.168.0.202", containerIP: "192.168.0.11"},
+		{SNICIP: "192.168.0.202", containerIP: "192.168.0.12"},
+		{SNICIP: "192.168.0.201", containerIP: "192.168.0.13"},
+		{SNICIP: "192.168.0.201", containerIP: "192.168.0.14"},
+		{SNICIP: "192.168.0.201", containerIP: "192.168.0.15"},
+		{SNICIP: "192.168.0.201", containerIP: "192.168.0.16"},
 	}
 	//listenとconnectを行う
 	//SNICIP==..201なら100,202なら101にiptablesでルーティングを行う。
@@ -131,22 +131,22 @@ func cmdAdd(args *skel.CmdArgs) error {
 		}
 	}
 
-	if snic_now_ip == "192.168.11.202" {
-		if err := exec.Command("nsenter", "--net="+c_netns, "ip", "route", "add", "default", "via", "192.168.11.100").Run(); err != nil {
+	if snic_now_ip == "192.168.0.202" {
+		if err := exec.Command("nsenter", "--net="+c_netns, "ip", "route", "add", "default", "via", "192.168.0.100").Run(); err != nil {
 			return fmt.Errorf("can't attch route %v", err)
 		}
 	} else {
-		if err := exec.Command("nsenter", "--net="+c_netns, "ip", "route", "add", "default", "via", "192.168.11.102").Run(); err != nil {
+		if err := exec.Command("nsenter", "--net="+c_netns, "ip", "route", "add", "default", "via", "192.168.0.102").Run(); err != nil {
 			return fmt.Errorf("can't attch route %v", err)
 		}
 	}
 
 	for _, pair := range ipPairs {
 		if pair.containerIP == ipAddress {
-			if pair.SNICIP == "192.168.11.201" {
-				gw_str = "192.168.11.3"
+			if pair.SNICIP == "192.168.0.201" {
+				gw_str = "192.168.0.41"
 			} else {
-				gw_str = "192.168.11.4"
+				gw_str = "192.168.0.150"
 			}
 			err:=Listen_req(ipAddress,"9080",pair.SNICIP, listen_port, "0","/home/appleuser/nic-toe_buff3/sdk_work_zynq/wamer_work/src/sample/pass.wasm")
 			if err != nil {
@@ -159,10 +159,10 @@ func cmdAdd(args *skel.CmdArgs) error {
 			//}
 		} else {
 			var forward_ip string
-			if snic_now_ip == "192.168.11.202" {
-				forward_ip = "192.168.11.100"
+			if snic_now_ip == "192.168.0.202" {
+				forward_ip = "192.168.0.100"
 			} else {
-				forward_ip = "192.168.11.102"
+				forward_ip = "192.168.0.102"
 			}
 			split_ip := strings.Split(pair.containerIP, ".")
 			if len(split_ip) < 4 {
