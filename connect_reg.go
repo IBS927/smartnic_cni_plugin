@@ -9,7 +9,7 @@ import (
 )
 
 type ConnectInfo struct {
-    Mode           int     // Cのint。Goのint型はプラットフォームに依存するので、互換性に注意（必要に応じてint32またはint64を使用）
+    Mode           int32     // Cのint。Goのint型はプラットフォームに依存するので、互換性に注意（必要に応じてint32またはint64を使用）
     SrcIP          uint32  // Cの__u32に対応
     DstIP          uint32  // 同上
     SrcPort        uint16  // Cの__u16に対応
@@ -70,7 +70,7 @@ func Connect_reg(src_ip string, src_port_s string, dst_ip string, dst_port_s str
 
 	c_info.DstPort = uint16(dst_port)
 
-	c_info.Mode = 3
+	c_info.Mode = int32(3)
 
 	buf := &bytes.Buffer{}
 	err=binary.Write(buf, binary.LittleEndian, c_info.Mode)
