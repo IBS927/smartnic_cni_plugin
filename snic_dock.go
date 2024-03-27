@@ -12,6 +12,7 @@ import (
 	"github.com/containernetworking/cni/pkg/types"
 	current "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/cni/pkg/version"
+	"time"
 )
 
 type PluginEnvArgs struct {
@@ -152,6 +153,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			if err != nil {
 				return fmt.Errorf("failed to listen_req : %v\n",err)
 			}
+			time.Sleep(1 * time.Second)
 			//cmd_listen := exec.Command("./listen_req", ipAddress, "9080", pair.SNICIP, listen_port, "0","../sdk_work_zynq/wamer_work/src/sample/pass.wasm")
 			//cmd_listen.Dir = "/home/appleuser/nic-toe_buff3/ebpf"
 			//if err := cmd_listen.Run(); err != nil {
@@ -180,6 +182,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			if err != nil {
 				return fmt.Errorf("failed to connect: %v", err)
 			}
+			time.Sleep(1 * time.Second)
 		}
 	}
 	
