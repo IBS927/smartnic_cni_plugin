@@ -158,7 +158,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			} else {
 				forward_ip = "192.168.0.102"
 			}
-			err = Connect_reg(forward_ip,listen_port,snic_now_ip,listen_port,"0", false)
+			err = Connect_reg(forward_ip,listen_port,snic_now_ip,listen_port,"0", true)
 			if err != nil {
 				return fmt.Errorf("failed to connect: %v", err)
 			}
@@ -186,7 +186,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			if err := exec.Command("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-s", ipAddress, "-d", pair.containerIP, "-j", "DNAT", "--to-destination", forward_ip+":"+forward_port).Run(); err != nil {
 				return fmt.Errorf("failed to set iptables: %v", err)
 			}
-			err = Connect_reg(forward_ip,forward_port,pair.SNICIP,forward_port,"0", false)
+			err = Connect_reg(forward_ip,forward_port,pair.SNICIP,forward_port,"0", true)
 			if err != nil {
 				return fmt.Errorf("failed to connect: %v", err)
 			}
