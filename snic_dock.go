@@ -169,10 +169,13 @@ func cmdAdd(args *skel.CmdArgs) error {
 			//}
 		} else {
 			var forward_ip string
+			var envoy_ip string
 			if snic_now_ip == "192.168.0.202" {
 				forward_ip = "192.168.0.100"
+				envoy_ip = "192.168.0.99"
 			} else {
 				forward_ip = "192.168.0.102"
+				envoy_ip = "192.168.0.103"
 			}
 			split_ip := strings.Split(pair.containerIP, ".")
 			if len(split_ip) < 4 {
@@ -183,8 +186,9 @@ func cmdAdd(args *skel.CmdArgs) error {
 				fmt.Errorf("The last ip is not int type: %v", err)
 			}
 			forward_port := fmt.Sprintf("%d", last_ip+10000)
+
 			if snic_now_ip == pair.SNICIP {
-				if err := exec.Command("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-s", ipAddress, "-d", pair.containerIP, "-j", "DNAT", "--to-destination", forward_ip+":15006").Run(); err != nil {
+				if err := exec.Command("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-s", ipAddress, "-d", pair.containerIP, "-j", "DNAT", "--to-destination", envoy_ip+":15006").Run(); err != nil {
 					return fmt.Errorf("failed to set iptables: %v", err)
 				}
 			}else{
