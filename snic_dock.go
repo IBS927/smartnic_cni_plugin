@@ -183,9 +183,18 @@ func cmdAdd(args *skel.CmdArgs) error {
 				fmt.Errorf("The last ip is not int type: %v", err)
 			}
 			forward_port := fmt.Sprintf("%d", last_ip+10000)
-			if err := exec.Command("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-s", ipAddress, "-d", pair.containerIP, "-j", "DNAT", "--to-destination", forward_ip+":"+forward_port).Run(); err != nil {
-				return fmt.Errorf("failed to set iptables: %v", err)
+			if snic_now_ip == pair.SNICIP {
+				if err := exec.Command("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-s", ipAddress, "-d", pair.containerIP, "-j", "DNAT", "--to-destination", forward_ip+":15006").Run(); err != nil {
+					return fmt.Errorf("failed to set iptables: %v", err)
+				}
+			}else{
+				if err := exec.Command("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-s", ipAddress, "-d", pair.containerIP, "-j", "DNAT", "--to-destination", forward_ip+":"+forward_port).Run(); err != nil {
+					return fmt.Errorf("failed to set iptables: %v", err)
+				}
 			}
+			//if err := exec.Command("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-s", ipAddress, "-d", pair.containerIP, "-j", "DNAT", "--to-destination", forward_ip+":"+forward_port).Run(); err != nil {
+			//	return fmt.Errorf("failed to set iptables: %v", err)
+			//}
 			err = Connect_reg(forward_ip,forward_port,pair.SNICIP,forward_port,"0", true)
 			if err != nil {
 				return fmt.Errorf("failed to connect: %v", err)
